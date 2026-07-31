@@ -10,7 +10,7 @@ import "../ha-ripple";
 @customElement("ha-tile-container")
 export class HaTileContainer extends LitElement {
   @property({ attribute: false })
-  public featurePosition: "bottom" | "inline" = "bottom";
+  public firstFeaturePosition: "bottom" | "inline" = "bottom";
 
   @property({ type: Boolean })
   public vertical = false;
@@ -37,7 +37,7 @@ export class HaTileContainer extends LitElement {
 
   protected render() {
     const containerOrientationClass =
-      this.featurePosition === "inline" ? "horizontal" : "";
+      this.firstFeaturePosition === "inline" ? "inline-feature" : "";
     const contentClasses = {
       vertical: this.vertical,
       "fixed-info-height": this.fixedInfoHeight,
@@ -64,7 +64,8 @@ export class HaTileContainer extends LitElement {
           <slot name="icon"></slot>
           <slot name="info" id="info"></slot>
         </div>
-        <slot name="features"></slot>
+        <slot name="inline-feature"></slot>
+        <slot name="bottom-features"></slot>
       </div>
     `;
   }
@@ -93,16 +94,26 @@ export class HaTileContainer extends LitElement {
     }
     .container {
       margin: calc(-1 * var(--ha-card-border-width, 1px));
-      display: flex;
-      flex-direction: column;
-      flex: 1;
+      display: grid;
+      gap: 0px;
+      flex-grow: 1;
+      grid-template-rows: 1fr min-content;
+      grid-template-columns: auto calc(
+          50% - var(--column-gap, 0px) / 2 - var(--ha-space-3)
+        );
+      grid-template-areas:
+        "content content"
+        "bottom-features bottom-features";
     }
-    .container.horizontal {
-      flex-direction: row;
+    .container.inline-feature {
+      grid-template-areas:
+        "content inline-feature"
+        "bottom-features bottom-features";
     }
 
     .content {
       position: relative;
+      grid-area: content;
       display: flex;
       flex-direction: row;
       align-items: center;
@@ -149,16 +160,17 @@ export class HaTileContainer extends LitElement {
       transition: background-color 180ms ease-in-out;
       box-sizing: border-box;
     }
-    ::slotted([slot="features"]) {
+    ::slotted([slot="bottom-features"]) {
       padding: 0 var(--ha-space-3) var(--ha-space-3) var(--ha-space-3);
+      grid-area: bottom-features;
+      min-width: 0;
     }
-
-    .container.horizontal ::slotted([slot="features"]) {
-      width: calc(50% - var(--column-gap, 0px) / 2 - var(--ha-space-3));
-      flex: none;
+    ::slotted([slot="inline-feature"]) {
+      grid-area: inline-feature;
       --feature-height: var(--ha-space-9);
       padding: 0 var(--ha-space-3);
       padding-inline-start: 0;
+      min-width: 0;
     }
     [role="button"] {
       cursor: pointer;

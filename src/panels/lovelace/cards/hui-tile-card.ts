@@ -107,13 +107,13 @@ export class HuiTileCard extends LitElement implements LovelaceCard {
   }
 
   public getCardSize(): number {
-    const featuresPosition =
-      this._config && this._featurePosition(this._config);
+    const firstFeaturePosition =
+      this._config && this._firstFeaturePosition(this._config);
     const featuresCount = this._config?.features?.length || 0;
     return (
       1 +
       (this._config?.vertical ? 1 : 0) +
-      (featuresPosition === "inline" ? 0 : featuresCount)
+      (firstFeaturePosition === "inline" ? featuresCount - 1 : featuresCount)
     );
   }
 
@@ -121,11 +121,13 @@ export class HuiTileCard extends LitElement implements LovelaceCard {
     const columns = 6;
     let min_columns = 6;
     let rows = 1;
-    const featurePosition = this._config && this._featurePosition(this._config);
+    const firstFeaturePosition =
+      this._config && this._firstFeaturePosition(this._config);
     const featuresCount = this._config?.features?.length || 0;
     if (featuresCount) {
-      if (featurePosition === "inline") {
+      if (firstFeaturePosition === "inline") {
         min_columns = 12;
+        rows += featuresCount - 1;
       } else {
         rows += featuresCount;
       }
@@ -227,19 +229,19 @@ export class HuiTileCard extends LitElement implements LovelaceCard {
     );
   }
 
-  private _featurePosition = memoizeOne((config: TileCardConfig) => {
+  private _firstFeaturePosition = memoizeOne((config: TileCardConfig) => {
     if (config.vertical) {
       return "bottom";
     }
     return config.features_position || "bottom";
   });
 
-  private _displayedFeatures = memoizeOne((config: TileCardConfig) => {
+  private _displayedBottomFeatures = memoizeOne((config: TileCardConfig) => {
     const features = config.features || [];
-    const featurePosition = this._featurePosition(config);
+    const firstFeaturePosition = this._firstFeaturePosition(config);
 
-    if (featurePosition === "inline") {
-      return features.slice(0, 1);
+    if (firstFeaturePosition === "inline") {
+      return features.slice(1);
     }
     return features;
   });
@@ -285,8 +287,8 @@ export class HuiTileCard extends LitElement implements LovelaceCard {
       ? this._getImageUrl(stateObj)
       : undefined;
 
-    const featurePosition = this._featurePosition(this._config);
-    const features = this._displayedFeatures(this._config);
+    const firstFeaturePosition = this._firstFeaturePosition(this._config);
+    const features = this._config.features || [];
 
     const hasImage = Boolean(imageUrl);
 
@@ -296,7 +298,7 @@ export class HuiTileCard extends LitElement implements LovelaceCard {
     return html`
       <ha-card style=${styleMap(style)} class=${classMap({ active })}>
         <ha-tile-container
-          .featurePosition=${featurePosition}
+          .firstFeaturePosition=${firstFeaturePosition}
           .vertical=${Boolean(this._config.vertical)}
           .fixedInfoHeight=${fixedInfoHeight}
           .interactive=${this._hasCardAction}
@@ -341,14 +343,28 @@ export class HuiTileCard extends LitElement implements LovelaceCard {
             }
           </ha-tile-info>
           ${
-            features.length > 0
+            features.length > 0 && firstFeaturePosition === "inline"
               ? html`
                   <hui-card-features
-                    slot="features"
+                    slot="inline-feature"
                     .hass=${this.hass}
                     .context=${this._featureContext}
                     .color=${this._config.color}
-                    .features=${features}
+                    .features=${features.slice(0, 1)}
+                  ></hui-card-features>
+                `
+              : nothing
+          }
+          ${
+            (features.length > 0 && firstFeaturePosition === "bottom") ||
+            (features.length > 1 && firstFeaturePosition === "inline")
+              ? html`
+                  <hui-card-features
+                    slot="bottom-features"
+                    .hass=${this.hass}
+                    .context=${this._featureContext}
+                    .color=${this._config.color}
+                    .features=${this._displayedBottomFeatures(this._config)}
                   ></hui-card-features>
                 `
               : nothing
